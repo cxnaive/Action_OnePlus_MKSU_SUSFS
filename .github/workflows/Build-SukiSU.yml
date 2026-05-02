@@ -212,7 +212,17 @@ jobs:
           fi
 
           cd ./common
-          patch -p1 < 50_add_susfs_in_gki-${{ github.event.inputs.ANDROID_VERSION }}-${{ github.event.inputs.KERNEL_VERSION }}.patch || true
+
+          # Ensure SUSFS patch applies cleanly (fake kernel patches)
+          if [ "${{ github.event.inputs.ANDROID_VERSION }}" = "android14" ] && [ "${{ github.event.inputs.KERNEL_VERSION }}" = "6.1" ]; then
+            if ! grep -qxF '#include <linux/dma-buf.h>' ./fs/proc/base.c; then
+              echo "#include <linux/dma-buf.h> Line not found. Adding missing header"
+              sed -i '/#include <linux\/cpufreq_times.h>/a #include <linux\/dma-buf.h>' ./fs/proc/base.c
+            fi
+          fi
+
+          echo "正在给内核打susfs补丁"
+          patch -p1 --forward < 50_add_susfs_in_gki-${{ github.event.inputs.ANDROID_VERSION }}-${{ github.event.inputs.KERNEL_VERSION }}.patch
           echo "完成"
 
       - name: Apply Hide Stuff Patches
